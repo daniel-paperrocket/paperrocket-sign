@@ -32,7 +32,7 @@ jobs:
         run: npm run build
       - name: Render email and certificate snapshots
         if: hashFiles('scripts/paperrocket/render-snapshots.ts') != ''
-        run: npx tsx scripts/paperrocket/render-snapshots.ts out/snapshots
+        run: npx vite-node --config scripts/paperrocket/vite.config.ts scripts/paperrocket/render-snapshots.ts out/snapshots
       - name: Upload snapshots
         if: hashFiles('scripts/paperrocket/render-snapshots.ts') != ''
         uses: actions/upload-artifact@v4
