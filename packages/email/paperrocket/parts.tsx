@@ -144,6 +144,9 @@ export const Notice = ({ title, children }: { title: string; children?: React.Re
   </div>
 );
 
+/** The font stack with single quotes, safe inside a double-quoted style attribute in raw HTML. */
+const FONT_STACK_ATTR = FONT_STACK.replace(/"/g, "'");
+
 const estimateButtonWidth = (label: string) => Math.min(520, Math.max(180, Math.round(label.length * 9 + 84)));
 
 export type ButtonProps = {
@@ -175,7 +178,7 @@ export const Button = ({ href, label }: ButtonProps) => {
     `<!--[if !mso]><!-->` +
     `<table role="presentation" class="pr-btn-table" cellpadding="0" cellspacing="0" border="0"><tr>` +
     `<td class="pr-btn-td" bgcolor="${fill}" style="background:${fill};border-radius:10px;">` +
-    `<a class="pr-btn" href="${safeHref}" target="_blank" style="display:inline-block;background:${fill};color:${text};text-decoration:none;font-family:${FONT_STACK};font-weight:600;font-size:15px;line-height:20px;letter-spacing:0.005em;padding:16px 30px;border-radius:10px;">` +
+    `<a class="pr-btn" href="${safeHref}" target="_blank" style="display:inline-block;background:${fill};color:${text};text-decoration:none;font-family:${FONT_STACK_ATTR};font-weight:600;font-size:15px;line-height:20px;letter-spacing:0.005em;padding:16px 30px;border-radius:10px;">` +
     `${safeLabel}<span style="display:inline-block;margin-left:10px;">&rarr;</span></a>` +
     `</td></tr></table>` +
     `<!--<![endif]-->`;
@@ -249,7 +252,8 @@ export const Facts = ({ rows }: FactsProps) => {
  * The fallback link line under the button. The link text is the address itself.
  */
 export const PlainLink = ({ intro, href }: { intro: string; href: string }) => {
-  const shown = href.length > 64 ? `${href.slice(0, 61)}...` : href;
+  const bare = href.replace(/^https?:\/\//, '');
+  const shown = bare.length > 45 ? `${bare.slice(0, 42)}...` : bare;
 
   return (
     <p
