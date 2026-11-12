@@ -5,7 +5,7 @@ name: paperrocket-sign
 
 on:
   pull_request:
-    branches: ['paperrocket']
+    branches: ['paperrocket', 'pr/**']
   push:
     branches: ['paperrocket']
     tags: ['v*-pr.*']
@@ -25,9 +25,26 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: No client names, hosts or server paths in the public repo
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            bash scripts/paperrocket/check-no-infra.sh "origin/$BASE_REF"
+          else
+            bash scripts/paperrocket/check-no-infra.sh
+          fi
       - uses: ./.github/actions/node-install
       - name: Copy env
         run: cp .env.example .env
+      - name: Type-check
+        run: npm run typecheck -w @documenso/remix
+      - name: Unit tests (zoned time formatting)
+        if: hashFiles('packages/lib/server-only/pdf/format-zoned-time.test.ts') != ''
+        run: npm run test -w @documenso/lib -- server-only/pdf/format-zoned-time.test.ts
       - name: Build app
         run: npm run build
       - name: Render email and certificate snapshots

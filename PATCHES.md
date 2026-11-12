@@ -20,3 +20,8 @@ Left alone (inert): AI docs pages, `.env.example`, `@ai-sdk/google-vertex` depen
 ## Upstream workflows removed
 
 Only `.github/workflows/paperrocket.yml` runs in this fork (security audit, 13 Nov 2026). Deleted: ci, codeql-analysis, deploy, e2e-tests, first-interaction, issue-labeler, issue-opened, pr-labeler, publish, semantic-pull-requests, stale, translations-force-pull, translations-pull, translations-upload. On a rebase, if upstream changes one of these, keep it deleted.
+
+## CI hardening (PAP-1457)
+
+- `.github/actions/node-install/action.yml`: `actions/setup-node` pinned to a commit SHA (v4.4.0) instead of the `v4` tag. Every action in `.github/workflows/paperrocket.yml` is pinned the same way. On a rebase, keep the pins and re-pin when bumping.
+- `.github/workflows/paperrocket.yml`: type-check and zoned-time unit test steps, pull requests on `pr/**` bases get CI, and a check step. `scripts/paperrocket/check-no-infra.sh` (ours, a plain grep) fails the build when the files we own, or the lines a PR adds, name a client, a host or a server path. Keep it on a rebase.

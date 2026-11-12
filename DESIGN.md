@@ -1,6 +1,6 @@
 # DESIGN.md: Paper Rocket signing templates (PAP-1441)
 
-Revision 3, 13 Nov 2026: letterhead header, no signature line in email, new footer, compatibility rules. Revision 2: designed dark mode and a premium pass. Covers every email and the certificate and audit pages in `packages/pr-templates`. The app screens stay stock Documenso for now. Research: `docs/research/templates.md`.
+Revision 3, 13 Nov 2026: letterhead header, no signature line in email, new footer, compatibility rules. Revision 2: designed dark mode and a premium pass. Covers every email and the certificate and audit pages in `packages/email/paperrocket/` (emails) and `packages/lib/server-only/pdf/` (certificate and audit log). The app screens stay stock Documenso for now. Research: `docs/research/templates.md`.
 
 ## Concept
 **Simple but stunning.** (Daniel, 12 Nov 2026)
@@ -98,4 +98,4 @@ NZ English, no em dashes, plain and short. Buttons say the action ("Review and s
 None (email and PDF).
 
 ## Rollout rule
-Templates live in `packages/pr-templates`. Upstream files only get import swaps, each listed in `PATCHES.md`. CI renders every email and the certificate from fixtures (HTML plus PNG at 390 and 600, light and dark) and fails on an unexpected diff.
+Email templates live in `packages/email/paperrocket/` and the certificate and audit log in `packages/lib/server-only/pdf/`. Upstream files only get import swaps, each listed in `PATCHES.md`. CI renders every email and the certificate from fixtures (HTML plus PNG at 390 and 600, light and dark) and fails on an unexpected diff.
