@@ -1,26 +1,35 @@
 // sort-imports-ignore
 import '../konva/skia-backend';
 
-import fs from 'node:fs';
-import path from 'node:path';
 import type { Canvas } from '@documenso/skia-canvas';
-import { Image as SkiaImage } from '@documenso/skia-canvas';
 import type { I18n } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import type { DocumentMeta, Envelope, RecipientRole } from '@prisma/client';
 import Konva from 'konva';
-import type { DateTimeFormatOptions } from 'luxon';
-import { DateTime } from 'luxon';
 import { match, P } from 'ts-pattern';
 import { UAParser } from 'ua-parser-js';
 
 import { DOCUMENT_STATUS } from '../../constants/document';
-import { APP_I18N_OPTIONS } from '../../constants/i18n';
 import { RECIPIENT_ROLES_DESCRIPTION } from '../../constants/recipient-roles';
 import type { TDocumentAuditLog } from '../../types/document-audit-logs';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../types/document-audit-logs';
 import { formatDocumentAuditLogAction } from '../../utils/document-audit-logs';
+import { formatZoneStatement, formatZonedDateTime, resolvePdfTimeZone } from './format-zoned-time';
 import { ensureFontLibrary } from './helpers';
+import type { PdfBranding } from './paperrocket-pdf-branding';
+import { DEFAULT_PDF_BRANDING } from './paperrocket-pdf-branding';
+import {
+  PDF_DESIGN_WIDTH,
+  createHairline,
+  createLabel,
+  createMono,
+  createPageBackground,
+  createText,
+  loadLogoImage,
+  pdfColors,
+  pdfLayout,
+  renderLetterhead,
+} from './paperrocket-pdf-kit';
 
 export type AuditLogRecipient = {
   id: number;
@@ -36,7 +45,9 @@ type GenerateAuditLogsOptions = {
   envelopeItems: string[];
   recipients: AuditLogRecipient[];
   auditLogs: TDocumentAuditLog[];
-  hidePoweredBy: boolean;
+  /** Ignored: the "provided by" credit is never drawn. */
+  hidePoweredBy?: boolean;
+  branding?: PdfBranding;
   pageWidth: number;
   pageHeight: number;
   i18n: I18n;
@@ -44,520 +55,297 @@ type GenerateAuditLogsOptions = {
     email: string;
     name: string;
   };
+  /** Defaults to 'pdf'. 'png' is used by the snapshot script. */
+  format?: 'pdf' | 'png';
 };
 
 const parser = new UAParser();
 
-const textMutedForegroundLight = '#929DAE';
-const textForeground = '#000';
-const textMutedForeground = '#64748B';
-const textBase = 10;
-const textSm = 9;
-const textXs = 8;
-const fontMedium = '500';
+const footerHeight = 36;
+const footerGapAbove = 24;
+const rowPaddingTop = 18;
+const rowPaddingBottom = 18;
 
-const pageTopMargin = 60;
-const pageBottomMargin = 27;
-const contentMaxWidth = 768;
-const rowPadding = 10;
-const titleFontSize = 18;
-
-type RenderOverviewCardLabelAndTextOptions = {
-  label: string;
-  text: string | string[];
-  width: number;
-  groupX?: number;
+type Block = {
+  group: Konva.Group;
+  height: number;
 };
 
-const renderOverviewCardLabels = (options: RenderOverviewCardLabelAndTextOptions) => {
-  const { width, text } = options;
-
-  const labelYSpacing = 4;
-
-  const group = new Konva.Group({
-    x: options.groupX ?? 0,
-  });
-
-  const label = new Konva.Text({
-    x: 0,
-    y: 0,
-    text: options.label,
-    fontStyle: fontMedium,
-    fontFamily: 'Inter',
-    fill: textForeground,
-    fontSize: textSm,
-  });
-
-  group.add(label);
-
-  if (typeof text === 'string') {
-    const value = new Konva.Text({
-      x: 0,
-      y: label.height() + labelYSpacing,
-      width: width - label.width(),
-      fontFamily: 'Inter',
-      text,
-      fill: textForeground,
-      wrap: 'char',
-      fontSize: textSm,
-    });
-
-    group.add(value);
-  } else {
-    for (const textValue of text) {
-      const value = new Konva.Text({
-        x: 0,
-        y: group.getClientRect().height + 4,
-        width: width - label.width(),
-        fontFamily: 'Inter',
-        text: '• ' + textValue,
-        fill: textForeground,
-        wrap: 'char',
-        fontSize: textSm,
-      });
-
-      group.add(value);
-    }
-  }
-
-  return group;
-};
-
-type RenderVerticalLabelAndTextOptions = {
-  label: string;
-  text: string;
-  width?: number;
-  align?: 'left' | 'right';
-  x?: number;
-  y?: number;
-  textFontFamily?: string;
-};
-
-const renderVerticalLabelAndText = (options: RenderVerticalLabelAndTextOptions) => {
-  const { label, text, width, align, x, y, textFontFamily } = options;
-
-  const group = new Konva.Group({
-    x: x ?? 0,
-    y: y ?? 0,
-  });
-
-  const konvaLabel = new Konva.Text({
-    align: align ?? 'left',
-    fontFamily: 'Inter',
-    width,
-    text: label,
-    fontSize: textXs,
-    fill: textMutedForegroundLight,
-  });
-
-  group.add(konvaLabel);
-
-  const konvaText = new Konva.Text({
-    y: group.getClientRect().height + 6,
-    align: align ?? 'left',
-    fontFamily: textFontFamily ?? 'Inter',
-    width,
-    text: text,
-    fontSize: textXs,
-    fill: textForeground,
-  });
-
-  group.add(konvaText);
-
-  return group;
-};
-
-type RenderOverviewCardOptions = {
-  envelope: Omit<Envelope, 'completedAt'> & {
-    documentMeta: DocumentMeta;
-  };
+type RenderOverviewOptions = {
+  envelope: GenerateAuditLogsOptions['envelope'];
   envelopeItems: string[];
-  envelopeOwner: {
-    email: string;
-    name: string;
-  };
+  envelopeOwner: GenerateAuditLogsOptions['envelopeOwner'];
   recipients: AuditLogRecipient[];
-  width: number;
+  zone: string;
   i18n: I18n;
 };
 
-const renderOverviewCard = (options: RenderOverviewCardOptions) => {
-  const { envelope, envelopeItems, envelopeOwner, recipients, width, i18n } = options;
-  const cardPadding = 16;
+const renderOverview = (options: RenderOverviewOptions): Block => {
+  const { envelope, envelopeItems, envelopeOwner, recipients, zone, i18n } = options;
 
-  const overviewCard = new Konva.Group();
+  const group = new Konva.Group();
+  group.add(createHairline(0));
 
-  const columnSpacing = 10;
-  const columnWidth = (width - columnSpacing) / 2;
-  const rowVerticalSpacing = 32;
+  const columnGap = 28;
+  const usable = pdfLayout.contentWidth - columnGap * 2;
+  const columnWidths = [(usable * 1.25) / 3.25, usable / 3.25, usable / 3.25];
+  const columnXs = [0, columnWidths[0] + columnGap, columnWidths[0] + columnWidths[1] + columnGap * 2];
 
-  const rowOne = new Konva.Group({
-    x: cardPadding,
-    y: cardPadding,
-  });
+  const facts: { label: string; value: string; mono?: boolean }[] = [
+    { label: i18n._(msg`Owner`), value: `${envelopeOwner.name} (${envelopeOwner.email})` },
+    {
+      label: i18n._(msg`Status`),
+      value: i18n._(envelope.deletedAt ? msg`Deleted` : DOCUMENT_STATUS[envelope.status].description),
+    },
+    { label: i18n._(msg`Time zone`), value: formatZoneStatement(envelope.updatedAt, zone) },
+    { label: i18n._(msg`Envelope ID`), value: envelope.id, mono: true },
+    { label: i18n._(msg`Created`), value: formatZonedDateTime(envelope.createdAt, zone) },
+    { label: i18n._(msg`Last updated`), value: formatZonedDateTime(envelope.updatedAt, zone) },
+  ];
 
-  const envelopeIdLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Envelope ID`),
-    text: envelope.id,
-    width: columnWidth,
-  });
-  const ownerLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Owner`),
-    text: `${envelopeOwner.name} (${envelopeOwner.email})`,
-    width: columnWidth,
-    groupX: columnWidth + columnSpacing,
-  });
+  let y = 20;
 
-  rowOne.add(envelopeIdLabel);
-  rowOne.add(ownerLabel);
-  overviewCard.add(rowOne);
+  for (let rowStart = 0; rowStart < facts.length; rowStart += 3) {
+    let rowHeight = 0;
 
-  const rowTwo = new Konva.Group({
-    x: cardPadding,
-    y: overviewCard.getClientRect().height + rowVerticalSpacing,
-  });
+    for (const [column, fact] of facts.slice(rowStart, rowStart + 3).entries()) {
+      const label = createLabel(fact.label, { x: columnXs[column], y, width: columnWidths[column] });
+      const valueConfig = {
+        x: columnXs[column],
+        y: y + label.height() + 5,
+        width: columnWidths[column],
+        text: fact.value,
+        wrap: 'char' as const,
+      };
 
-  const statusLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Status`),
-    text: i18n._(envelope.deletedAt ? msg`Deleted` : DOCUMENT_STATUS[envelope.status].description).toUpperCase(),
-    width: columnWidth,
-  });
-  const timeZoneLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Time Zone`),
-    text: envelope.documentMeta?.timezone || 'N/A',
-    width: columnWidth,
-    groupX: columnWidth + columnSpacing,
-  });
+      const value = fact.mono
+        ? createMono({ ...valueConfig, fontSize: 10.5 })
+        : createText({ ...valueConfig, fontSize: 11, fontStyle: '500' });
 
-  rowTwo.add(statusLabel);
-  rowTwo.add(timeZoneLabel);
-  overviewCard.add(rowTwo);
+      group.add(label);
+      group.add(value);
 
-  const rowThree = new Konva.Group({
-    x: cardPadding,
-    y: overviewCard.getClientRect().height + rowVerticalSpacing,
-  });
+      rowHeight = Math.max(rowHeight, label.height() + 5 + value.height());
+    }
 
-  const createdAtLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Created At`),
-    text: DateTime.fromJSDate(envelope.createdAt)
-      .setLocale(APP_I18N_OPTIONS.defaultLocale)
-      .toFormat('yyyy-MM-dd hh:mm:ss a (ZZZZ)'),
-    width: columnWidth,
-  });
-  const lastUpdatedLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Last Updated`),
-    text: DateTime.fromJSDate(envelope.updatedAt)
-      .setLocale(APP_I18N_OPTIONS.defaultLocale)
-      .toFormat('yyyy-MM-dd hh:mm:ss a (ZZZZ)'),
-    width: columnWidth,
-    groupX: columnWidth + columnSpacing,
-  });
+    y += rowHeight + 18;
+  }
 
-  rowThree.add(createdAtLabel);
-  rowThree.add(lastUpdatedLabel);
-  overviewCard.add(rowThree);
+  // Lists: enclosed documents and recipients.
+  const listWidth = (pdfLayout.contentWidth - columnGap) / 2;
+  const lists = [
+    { label: i18n._(msg`Enclosed documents`), items: envelopeItems, x: 0 },
+    {
+      label: i18n._(msg`Recipients`),
+      items: recipients.map(
+        (recipient) =>
+          `[${i18n._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName)}] ${recipient.name} (${recipient.email})`,
+      ),
+      x: listWidth + columnGap,
+    },
+  ];
 
-  const rowFour = new Konva.Group({
-    x: cardPadding,
-    y: overviewCard.getClientRect().height + rowVerticalSpacing,
-  });
+  let listsHeight = 0;
 
-  const enclosedDocumentsLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Enclosed Documents`),
-    text: envelopeItems,
-    width: columnWidth,
-  });
+  for (const list of lists) {
+    const label = createLabel(list.label, { x: list.x, y, width: listWidth });
+    group.add(label);
 
-  const recipientsLabel = renderOverviewCardLabels({
-    label: i18n._(msg`Recipients`),
-    text: recipients.map(
-      (recipient) =>
-        `[${i18n._(RECIPIENT_ROLES_DESCRIPTION[recipient.role].roleName)}] ${recipient.name} (${recipient.email})`,
-    ),
-    width: columnWidth,
-    groupX: columnWidth + columnSpacing,
-  });
+    let listY = y + label.height() + 5;
 
-  rowFour.add(enclosedDocumentsLabel);
-  rowFour.add(recipientsLabel);
-  overviewCard.add(rowFour);
+    for (const item of list.items) {
+      const text = createText({
+        x: list.x,
+        y: listY,
+        width: listWidth,
+        text: item,
+        fontSize: 10,
+        fill: pdfColors.ink2,
+        wrap: 'char',
+      });
 
-  // Create rect border around the overview card
-  const cardRect = new Konva.Rect({
-    x: 0,
-    y: 0,
-    width,
-    height: overviewCard.getClientRect().height + cardPadding * 2,
-    stroke: '#e5e7eb',
-    strokeWidth: 1.5,
-    cornerRadius: 8,
-  });
+      group.add(text);
+      listY += text.height() + 3;
+    }
 
-  overviewCard.add(cardRect);
+    listsHeight = Math.max(listsHeight, listY - y);
+  }
 
-  return overviewCard;
+  y += listsHeight + 36;
+
+  return { group, height: y };
+};
+
+const getIndicatorColor = (type: string, primaryColor: string) =>
+  match(type)
+    .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_COMPLETED, () => pdfColors.ok)
+    .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED, () => pdfColors.alert)
+    .with(
+      P.union(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT, DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_COMPLETED),
+      () => primaryColor,
+    )
+    .otherwise(() => pdfColors.lineStrong);
+
+const formatUserAgent = (userAgent: string | null | undefined, userAgentInfo: UAParser.IResult, i18n: I18n) => {
+  if (!userAgent) {
+    return i18n._(msg`N/A`);
+  }
+
+  const browser = userAgentInfo.browser.name;
+  const version = userAgentInfo.browser.version;
+  const os = userAgentInfo.os.name;
+
+  if (browser && os) {
+    const browserInfo = version ? `${browser} ${version}` : browser;
+
+    return i18n._(msg`${browserInfo} on ${os}`);
+  }
+
+  return userAgent;
 };
 
 type RenderRowOptions = {
   auditLog: TDocumentAuditLog;
-  width: number;
+  zone: string;
+  primaryColor: string;
   i18n: I18n;
 };
 
-const renderRow = (options: RenderRowOptions) => {
-  const { auditLog, width, i18n } = options;
+const renderRow = (options: RenderRowOptions): Block => {
+  const { auditLog, zone, primaryColor, i18n } = options;
 
-  const paddingWithinCard = 12;
+  const group = new Konva.Group();
+  group.add(createHairline(0));
 
-  const columnSpacing = 10;
-  const columnWidth = (width - paddingWithinCard * 2 - columnSpacing) / 2;
+  const half = (pdfLayout.contentWidth - 28) / 2;
+  let y = rowPaddingTop;
 
-  const indicatorWidth = 3;
-  const indicatorPaddingRight = 10;
-  const rowGroup = new Konva.Group();
+  group.add(
+    new Konva.Circle({
+      x: 3.5,
+      y: y + 6,
+      radius: 3.5,
+      fill: getIndicatorColor(auditLog.type, primaryColor),
+    }),
+  );
 
-  const rowHeaderGroup = new Konva.Group();
+  const typeLabel = createLabel(auditLog.type.replace(/_/g, ' '), { x: 16, y, width: half - 16, wrap: 'char' });
+  group.add(typeLabel);
 
-  const auditLogIndicatorColor = new Konva.Circle({
-    x: indicatorWidth,
-    y: indicatorWidth + 3,
-    radius: indicatorWidth,
-    fill: getAuditLogIndicatorColor(auditLog.type),
+  const timestamp = createText({
+    x: half + 28,
+    y: y - 1,
+    width: half,
+    align: 'right',
+    text: formatZonedDateTime(auditLog.createdAt, zone),
+    fontSize: 10,
+    fill: pdfColors.muted,
+    lineHeight: 1.45,
   });
+  group.add(timestamp);
 
-  const auditLogTypeText = new Konva.Text({
-    x: indicatorWidth + indicatorPaddingRight,
-    y: 0,
-    width: columnWidth - indicatorWidth - indicatorPaddingRight,
-    text: auditLog.type.replace(/_/g, ' '),
-    fontFamily: 'Inter',
-    fontSize: textSm,
-    fontStyle: fontMedium,
-    fill: textMutedForeground,
-  });
+  y += Math.max(typeLabel.height(), timestamp.height() - 1) + 5;
 
-  const auditLogDescriptionText = new Konva.Text({
-    x: indicatorWidth + indicatorPaddingRight,
-    y: auditLogTypeText.height() + 4,
-    width: columnWidth - indicatorWidth - indicatorPaddingRight,
+  const description = createText({
+    x: 16,
+    y,
+    width: pdfLayout.contentWidth - 16,
     text: formatDocumentAuditLogAction(i18n, auditLog).description,
-    fontFamily: 'Inter',
-    fontSize: textSm,
-    fill: textForeground,
+    fontSize: 10.5,
+    wrap: 'word',
   });
+  group.add(description);
 
-  const auditLogTimestampText = new Konva.Text({
-    x: columnWidth + columnSpacing,
-    width: columnWidth,
-    text: DateTime.fromJSDate(auditLog.createdAt).setLocale(APP_I18N_OPTIONS.defaultLocale).toLocaleString(dateFormat),
-    fontFamily: 'Inter',
-    align: 'right',
-    fontSize: textSm,
-    fill: textMutedForeground,
-  });
-
-  rowHeaderGroup.add(auditLogIndicatorColor);
-  rowHeaderGroup.add(auditLogTypeText);
-  rowHeaderGroup.add(auditLogDescriptionText);
-  rowHeaderGroup.add(auditLogTimestampText);
-
-  rowHeaderGroup.setAttrs({
-    x: paddingWithinCard,
-    y: paddingWithinCard,
-  } satisfies Partial<Konva.GroupConfig>);
-
-  rowGroup.add(rowHeaderGroup);
-
-  // Draw border line.
-  const borderLine = new Konva.Line({
-    points: [0, 0, width - paddingWithinCard * 2, 0],
-    stroke: '#e5e7eb',
-    strokeWidth: 1,
-    x: paddingWithinCard,
-    y: rowGroup.getClientRect().height + paddingWithinCard + 12,
-  });
-
-  rowGroup.add(borderLine);
-
-  const bottomSection = new Konva.Group({
-    x: paddingWithinCard,
-    y: rowGroup.getClientRect().height + paddingWithinCard + 12,
-  });
-
-  // Row 1 Column 1
-  const userLabel = renderVerticalLabelAndText({
-    label: i18n._(msg`User`).toUpperCase(),
-    text: auditLog.email || 'N/A',
-    align: 'left',
-    width: columnWidth,
-    textFontFamily: 'ui-monospace',
-  });
-
-  // Row 1 Column 2
-  const ipAddressLabel = renderVerticalLabelAndText({
-    label: i18n._(msg`IP Address`).toUpperCase(),
-    text: auditLog.ipAddress || 'N/A',
-    align: 'right',
-    x: columnWidth + columnSpacing,
-    width: columnWidth,
-    textFontFamily: 'ui-monospace',
-  });
-
-  bottomSection.add(userLabel);
-  bottomSection.add(ipAddressLabel);
+  y += description.height() + 12;
 
   parser.setUA(auditLog.userAgent || '');
   const userAgentInfo = parser.getResult();
 
-  // Row 2 Column 1
-  const userAgentLabel = renderVerticalLabelAndText({
-    label: i18n._(msg`User Agent`).toUpperCase(),
-    text: i18n._(formatUserAgent(auditLog.userAgent, userAgentInfo)),
-    align: 'left',
-    width,
-    y: bottomSection.getClientRect().height + 16,
+  const cells = [
+    { label: i18n._(msg`User`), value: auditLog.email || i18n._(msg`N/A`), mono: true, x: 16, width: half - 16 },
+    { label: i18n._(msg`IP address`), value: auditLog.ipAddress || i18n._(msg`N/A`), mono: true, x: half + 28, width: half },
+  ];
+
+  let cellsHeight = 0;
+
+  for (const cell of cells) {
+    const label = createLabel(cell.label, { x: cell.x, y, width: cell.width, size: 8 });
+    const value = createMono({ x: cell.x, y: y + label.height() + 3, width: cell.width, text: cell.value, fontSize: 9, wrap: 'char' });
+
+    group.add(label);
+    group.add(value);
+
+    cellsHeight = Math.max(cellsHeight, label.height() + 3 + value.height());
+  }
+
+  y += cellsHeight + 9;
+
+  const agentLabel = createLabel(i18n._(msg`User agent`), { x: 16, y, width: pdfLayout.contentWidth - 16, size: 8 });
+  const agentValue = createText({
+    x: 16,
+    y: y + agentLabel.height() + 3,
+    width: pdfLayout.contentWidth - 16,
+    text: formatUserAgent(auditLog.userAgent, userAgentInfo, i18n),
+    fontSize: 9,
+    fill: pdfColors.ink2,
+    wrap: 'char',
   });
 
-  bottomSection.add(userAgentLabel);
-  rowGroup.add(bottomSection);
+  group.add(agentLabel);
+  group.add(agentValue);
 
-  const cardRect = new Konva.Rect({
+  y += agentLabel.height() + 3 + agentValue.height();
+
+  return { group, height: y + rowPaddingBottom };
+};
+
+const renderFooter = (options: {
+  branding: PdfBranding;
+  envelopeId: string;
+  pageNumber: number;
+  pageCount: number;
+  designHeight: number;
+  i18n: I18n;
+}) => {
+  const { branding, envelopeId, pageNumber, pageCount, designHeight, i18n } = options;
+
+  const group = new Konva.Group({ x: pdfLayout.marginX, y: designHeight - pdfLayout.bottom - footerHeight });
+  group.add(createHairline(0));
+
+  const pageText = createText({
+    text: i18n._(msg`Page ${pageNumber} of ${pageCount}`),
+    fontSize: 9,
+    fill: pdfColors.label,
+    lineHeight: 1.55,
+    wrap: 'none',
+  });
+
+  pageText.setAttrs({ x: pdfLayout.contentWidth - pageText.width(), y: 20 });
+  group.add(pageText);
+
+  const details = branding.companyDetails
+    ? branding.companyDetails
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join(' · ')
+    : branding.businessName;
+
+  const left = createText({
     x: 0,
-    y: 0,
-    width: rowGroup.getClientRect().width,
-    height: rowGroup.getClientRect().height + paddingWithinCard * 2,
-    stroke: '#e5e7eb',
-    strokeWidth: 1,
-    cornerRadius: 8,
+    y: 20,
+    width: pdfLayout.contentWidth - pageText.width() - 20,
+    height: 9 * 1.55,
+    text: details || `${i18n._(msg`Envelope ID`)}: ${envelopeId}`,
+    fontSize: 9,
+    fill: pdfColors.label,
+    lineHeight: 1.55,
+    wrap: 'none',
+    ellipsis: true,
   });
+  group.add(left);
 
-  rowGroup.add(cardRect);
-
-  return rowGroup;
-};
-
-const renderBranding = () => {
-  const branding = new Konva.Group();
-
-  const brandingHeight = 16;
-
-  const logoPath = path.join(process.cwd(), 'public/static/logo.png');
-  const logo = fs.readFileSync(logoPath);
-
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  const img = new SkiaImage(logo) as unknown as HTMLImageElement;
-
-  const brandingImage = new Konva.Image({
-    image: img,
-    height: brandingHeight,
-    width: brandingHeight * (img.width / img.height),
-  });
-
-  branding.add(brandingImage);
-  return branding;
-};
-
-type GroupRowsIntoPagesOptions = {
-  auditLogs: TDocumentAuditLog[];
-  maxHeight: number;
-  contentWidth: number;
-  i18n: I18n;
-  overviewCard: Konva.Group;
-};
-
-const groupRowsIntoPages = (options: GroupRowsIntoPagesOptions) => {
-  const { auditLogs, maxHeight, contentWidth, i18n, overviewCard } = options;
-
-  const groupedRows: Konva.Group[][] = [[]];
-
-  const overviewCardHeight = overviewCard.getClientRect().height;
-
-  // First page has title + overview card
-  let availableHeight = maxHeight - pageTopMargin - overviewCardHeight;
-  let currentGroupedRowIndex = 0;
-
-  // Group rows into pages.
-  for (const auditLog of auditLogs) {
-    const row = renderRow({ auditLog, width: contentWidth, i18n });
-
-    const rowHeight = row.getClientRect().height;
-    const requiredHeight = rowHeight + rowPadding;
-
-    if (requiredHeight > availableHeight) {
-      currentGroupedRowIndex++;
-      groupedRows[currentGroupedRowIndex] = [row];
-
-      // Subsequent pages only have title (no overview card)
-      availableHeight = maxHeight - pageTopMargin;
-    } else {
-      groupedRows[currentGroupedRowIndex].push(row);
-    }
-
-    // Reduce available height by the row height.
-    availableHeight -= requiredHeight;
-  }
-
-  return groupedRows;
-};
-
-type RenderPagesOptions = {
-  groupedRows: Konva.Group[][];
-  margin: number;
-  pageTopMargin: number;
-  i18n: I18n;
-  overviewCard: Konva.Group;
-};
-
-const renderPages = (options: RenderPagesOptions) => {
-  const { groupedRows, margin, pageTopMargin, i18n, overviewCard } = options;
-
-  const rowPadding = 10;
-  const pages: Konva.Group[] = [];
-
-  // Render the rows for each page.
-  for (const [pageIndex, rows] of groupedRows.entries()) {
-    const pageGroup = new Konva.Group();
-
-    // Add title to each page
-    const pageTitle = new Konva.Text({
-      x: margin,
-      y: 0,
-      height: pageTopMargin,
-      verticalAlign: 'middle',
-      text: i18n._(msg`Audit Log`),
-      fill: textForeground,
-      fontFamily: 'Inter',
-      fontSize: titleFontSize,
-      fontStyle: '700',
-    });
-    pageGroup.add(pageTitle);
-
-    // Add overview card only on first page
-    if (pageIndex === 0) {
-      overviewCard.setAttrs({
-        x: margin,
-        y: pageGroup.getClientRect().height,
-      });
-      pageGroup.add(overviewCard);
-    }
-
-    // Add rows to the page
-    for (const row of rows) {
-      const yPosition = pageGroup.getClientRect().height + rowPadding;
-
-      row.setAttrs({
-        x: margin,
-        y: yPosition,
-      });
-
-      pageGroup.add(row);
-    }
-
-    pages.push(pageGroup);
-  }
-
-  return pages;
+  return group;
 };
 
 export async function renderAuditLogs({
@@ -569,116 +357,148 @@ export async function renderAuditLogs({
   pageWidth,
   pageHeight,
   i18n,
-  hidePoweredBy,
+  branding = DEFAULT_PDF_BRANDING,
+  format = 'pdf',
 }: GenerateAuditLogsOptions) {
   ensureFontLibrary();
 
-  const minimumMargin = 10;
+  const scale = pageWidth / PDF_DESIGN_WIDTH;
+  const designHeight = pageHeight / scale;
+  const zone = resolvePdfTimeZone(envelope.documentMeta?.timezone);
 
-  const contentWidth = Math.min(pageWidth - minimumMargin * 2, contentMaxWidth);
-  const margin = (pageWidth - contentWidth) / 2;
+  const logoImage = loadLogoImage(branding.logo);
+
+  const limit = designHeight - pdfLayout.bottom - footerHeight - footerGapAbove;
+
+  const buildFirstHeader = () => {
+    const group = new Konva.Group();
+
+    const letterhead = renderLetterhead({
+      branding,
+      logoImage,
+      envelopeId: envelope.id,
+      envelopeLabel: i18n._(msg`Envelope`),
+    });
+    group.add(letterhead.group);
+
+    let y = pdfLayout.top + Math.max(letterhead.height, 32) + 52;
+
+    group.add(new Konva.Rect({ x: pdfLayout.marginX, y, width: 48, height: 1.5, fill: branding.primaryColor }));
+    y += 1.5 + 20;
+
+    const eyebrow = createLabel(i18n._(msg`Audit log`), { x: pdfLayout.marginX, y, size: 9.5 });
+    group.add(eyebrow);
+    y += eyebrow.height() + 10;
+
+    const title = createText({
+      x: pdfLayout.marginX,
+      y,
+      width: 640,
+      text: envelope.title,
+      fontSize: 31,
+      fontStyle: '600',
+      letterSpacing: -0.775,
+      lineHeight: 1.14,
+      wrap: 'word',
+    });
+    group.add(title);
+    y += title.height() + 36;
+
+    return { group, bottom: y };
+  };
+
+  const buildContinuationHeader = () => {
+    const group = new Konva.Group();
+
+    const letterhead = renderLetterhead({
+      branding,
+      logoImage,
+      envelopeId: envelope.id,
+      envelopeLabel: i18n._(msg`Audit log`),
+      compact: true,
+    });
+    group.add(letterhead.group);
+
+    const ruleY = pdfLayout.top + Math.max(letterhead.height, 32) + 18;
+    group.add(createHairline(ruleY, { x: pdfLayout.marginX }));
+
+    return { group, bottom: ruleY + 20 };
+  };
+
+  const overview = renderOverview({ envelope, envelopeItems, envelopeOwner, recipients, zone, i18n });
+
+  const rows = auditLogs.map((auditLog) =>
+    renderRow({ auditLog, zone, primaryColor: branding.primaryColor, i18n }),
+  );
+
+  const firstHeader = buildFirstHeader();
+  const firstStart = firstHeader.bottom + overview.height;
+  const continuationStart = buildContinuationHeader().bottom;
+
+  const pageRows: Block[][] = [[]];
+  let cursor = firstStart;
+
+  for (const row of rows) {
+    const current = pageRows[pageRows.length - 1];
+
+    if (current.length > 0 && cursor + row.height > limit) {
+      pageRows.push([row]);
+      cursor = continuationStart + row.height;
+    } else {
+      current.push(row);
+      cursor += row.height;
+    }
+  }
+
+  const pageCount = pageRows.length;
+  const pages: Uint8Array[] = [];
 
   let stage: Konva.Stage | null = new Konva.Stage({ width: pageWidth, height: pageHeight });
 
-  const overviewCard = renderOverviewCard({
-    envelope,
-    envelopeOwner,
-    envelopeItems,
-    recipients,
-    width: contentWidth,
-    i18n,
-  });
-
-  const groupedRows = groupRowsIntoPages({
-    auditLogs,
-    maxHeight: pageHeight - pageBottomMargin,
-    contentWidth,
-    i18n,
-    overviewCard,
-  });
-
-  const pageGroups = renderPages({
-    groupedRows,
-    margin,
-    pageTopMargin,
-    i18n,
-    overviewCard,
-  });
-
-  const brandingGroup = renderBranding();
-  const brandingRect = brandingGroup.getClientRect();
-  const brandingTopPadding = 24;
-
-  const pages: Uint8Array[] = [];
-
-  let isBrandingPlaced = false;
-
-  // Render each page group to PDF
-  for (const [index, pageGroup] of pageGroups.entries()) {
+  for (const [pageIndex, blocks] of pageRows.entries()) {
     stage.destroyChildren();
-    const page = new Konva.Layer();
 
-    const footerText = new Konva.Text({
-      x: margin,
-      y: pageHeight - textXs - 10,
-      text: `${i18n._(msg`Envelope ID`)}: ${envelope.id}`,
-      fontFamily: 'Inter',
-      fontSize: textXs,
-      fill: textMutedForegroundLight,
-    });
-    page.add(footerText);
+    const layer = new Konva.Layer();
+    const content = new Konva.Group({ scaleX: scale, scaleY: scale });
 
-    page.add(pageGroup);
+    content.add(createPageBackground(PDF_DESIGN_WIDTH, designHeight));
 
-    // Add branding on the last page if there is space.
-    if (index === pageGroups.length - 1 && !hidePoweredBy) {
-      const remainingHeight = pageHeight - pageGroup.getClientRect().height - pageBottomMargin;
+    let y: number;
 
-      if (brandingRect.height + brandingTopPadding <= remainingHeight) {
-        brandingGroup.setAttrs({
-          x: pageWidth - brandingRect.width - margin,
-          y: pageGroup.getClientRect().height + brandingTopPadding,
-        } satisfies Partial<Konva.GroupConfig>);
+    if (pageIndex === 0) {
+      content.add(firstHeader.group);
 
-        page.add(brandingGroup);
-        isBrandingPlaced = true;
-      }
+      overview.group.setAttrs({ x: pdfLayout.marginX, y: firstHeader.bottom });
+      content.add(overview.group);
+
+      y = firstStart;
+    } else {
+      const continuation = buildContinuationHeader();
+      content.add(continuation.group);
+
+      y = continuationStart;
     }
 
-    stage.add(page);
+    for (const block of blocks) {
+      block.group.setAttrs({ x: pdfLayout.marginX, y });
+      content.add(block.group);
+      y += block.height;
+    }
 
-    // Export the page and save it.
-    const canvas = page.canvas._canvas as unknown as Canvas; // eslint-disable-line @typescript-eslint/consistent-type-assertions
-    const buffer = await canvas.toBuffer('pdf');
-    pages.push(new Uint8Array(buffer));
-  }
+    if (blocks.length > 0) {
+      content.add(createHairline(y, { x: pdfLayout.marginX }));
+    }
 
-  // Need to create an empty page for the branding if it hasn't been placed yet.
-  if (!hidePoweredBy && !isBrandingPlaced) {
-    stage.destroyChildren();
-    const page = new Konva.Layer();
+    content.add(
+      renderFooter({ branding, envelopeId: envelope.id, pageNumber: pageIndex + 1, pageCount, designHeight, i18n }),
+    );
 
-    brandingGroup.setAttrs({
-      x: pageWidth - brandingRect.width - margin,
-      y: pageTopMargin,
-    } satisfies Partial<Konva.GroupConfig>);
-
-    const overflowFooterText = new Konva.Text({
-      x: margin,
-      y: pageHeight - textXs - 10,
-      text: `${i18n._(msg`Envelope ID`)}: ${envelope.id}`,
-      fontFamily: 'Inter',
-      fontSize: textXs,
-      fill: textMutedForegroundLight,
-    });
-    page.add(overflowFooterText);
-
-    page.add(brandingGroup);
-    stage.add(page);
+    layer.add(content);
+    stage.add(layer);
 
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const canvas = page.canvas._canvas as unknown as Canvas;
-    const buffer = await canvas.toBuffer('pdf');
+    const canvas = layer.canvas._canvas as unknown as Canvas;
+    const buffer = await canvas.toBuffer(format);
 
     pages.push(new Uint8Array(buffer));
   }
@@ -688,41 +508,3 @@ export async function renderAuditLogs({
 
   return pages;
 }
-
-const dateFormat: DateTimeFormatOptions = {
-  ...DateTime.DATETIME_SHORT,
-  hourCycle: 'h12',
-};
-
-/**
- * Get the color indicator for the audit log type
- */
-const getAuditLogIndicatorColor = (type: string) =>
-  match(type)
-    .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_COMPLETED, () => '#22c55e') // bg-green-500
-    .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_REJECTED, () => '#ef4444') // bg-red-500
-    .with(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_SENT, () => '#f97316') // bg-orange-500
-    .with(
-      P.union(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELD_INSERTED, DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELD_UNINSERTED),
-      () => '#3b82f6', // bg-blue-500
-    )
-    .otherwise(() => '#f1f5f9'); // bg-muted
-
-const formatUserAgent = (userAgent: string | null | undefined, userAgentInfo: UAParser.IResult) => {
-  if (!userAgent) {
-    return msg`N/A`;
-  }
-
-  const browser = userAgentInfo.browser.name;
-  const version = userAgentInfo.browser.version;
-  const os = userAgentInfo.os.name;
-
-  // If we can parse meaningful browser info, format it nicely
-  if (browser && os) {
-    const browserInfo = version ? `${browser} ${version}` : browser;
-
-    return msg`${browserInfo} on ${os}`;
-  }
-
-  return msg`${userAgent}`;
-};
