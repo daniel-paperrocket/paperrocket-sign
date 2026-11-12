@@ -1,3 +1,4 @@
+import { env } from '@documenso/lib/utils/env';
 import { createContext, useContext } from 'react';
 
 import { useBranding } from '../providers/branding';
@@ -29,14 +30,17 @@ const ThemeContext = createContext<PaperRocketTheme | null>(null);
 
 export const ThemeProvider = ThemeContext.Provider;
 
+/**
+ * The theme for the current email. react-email's Tailwind wrapper calls components as plain functions, so a
+ * context provided inside it never reaches them: when there is no provider, the theme is rebuilt from the
+ * branding provider, which sits outside Tailwind. Both hooks always run so the hook order is stable.
+ */
 export const usePaperRocketTheme = (): PaperRocketTheme => {
-  const theme = useContext(ThemeContext);
+  const provided = useContext(ThemeContext);
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  const built = useBuildPaperRocketTheme(env('NEXT_PUBLIC_WEBAPP_URL') ?? null);
 
-  if (!theme) {
-    throw new Error('Paper Rocket email theme not found, wrap the email in <Layout>');
-  }
-
-  return theme;
+  return provided ?? built;
 };
 
 const FALLBACK_NAME = 'Document signing';
