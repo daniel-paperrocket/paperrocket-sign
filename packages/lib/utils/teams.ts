@@ -237,6 +237,9 @@ export const extractDerivedTeamSettings = (
     }
   }
 
+  // paperrocket-sign: AI stripped (Daniel, 13 Nov 2026)
+  derivedSettings.aiFeaturesEnabled = false;
+
   return derivedSettings;
 };
 

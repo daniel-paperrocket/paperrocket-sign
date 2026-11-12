@@ -84,11 +84,12 @@ export const USE_INTERNAL_URL_BROWSERLESS = () => env('NEXT_PUBLIC_USE_INTERNAL_
  * - On the client, reads the derived public flag injected via `window.__ENV__`.
  */
 export const IS_AI_FEATURES_CONFIGURED = (): boolean => {
+  // paperrocket-sign: AI stripped (Daniel, 13 Nov 2026): always false, whatever the env says.
   if (typeof window === 'undefined') {
-    return !!env('GOOGLE_VERTEX_PROJECT_ID') && !!env('GOOGLE_VERTEX_API_KEY');
+    return false;
   }
 
-  return env('NEXT_PUBLIC_AI_FEATURES_ENABLED') === 'true';
+  return false;
 };
 
 /**

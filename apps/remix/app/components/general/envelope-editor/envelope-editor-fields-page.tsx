@@ -1,6 +1,7 @@
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentEnvelopeRender } from '@documenso/lib/client-only/providers/envelope-render-provider';
+import { IS_AI_FEATURES_CONFIGURED } from '@documenso/lib/constants/app';
 import { PDF_VIEWER_ERROR_MESSAGES } from '@documenso/lib/constants/pdf-viewer-i18n';
 import type { NormalizedFieldWithContext } from '@documenso/lib/server-only/ai/envelope/detect-fields/types';
 import {
@@ -349,7 +350,7 @@ export const EnvelopeEditorFieldsPage = () => {
               selectedEnvelopeItemId={currentEnvelopeItem?.id ?? null}
             />
 
-            {editorConfig.fields?.allowAIDetection && (
+            {editorConfig.fields?.allowAIDetection && IS_AI_FEATURES_CONFIGURED() && ( // paperrocket-sign: AI stripped (Daniel, 13 Nov 2026)
               <>
                 <Button
                   type="button"

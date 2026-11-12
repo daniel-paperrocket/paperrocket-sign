@@ -191,9 +191,7 @@ export const AdminGlobalSettingsSection = ({
         </DetailsCard>
       )}
 
-      <DetailsCard label={<Trans>AI features</Trans>}>
-        <DetailsValue>{booleanValue(settings.aiFeaturesEnabled, inheritedSettings?.aiFeaturesEnabled)}</DetailsValue>
-      </DetailsCard>
+      {/* paperrocket-sign: AI stripped (Daniel, 13 Nov 2026) */}
     </div>
   );
 };
