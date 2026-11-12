@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Import from Dropbox and Google Drive</title>
+<style>
+:root{--page:#F6F6F4;--ink:#141414;--muted:#5C5C58;--faint:#8A8A85;--line:#E6E6E2;--brand:#0B1628;--ok:#1F7A4D;--warn:#9A5B00;
+--sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--page);color:var(--ink);font:16px/1.55 var(--sys);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding:56px 16px 96px}
+.kicker{font-size:13px;color:var(--muted);font-weight:500}
+h1{font-size:34px;line-height:1.15;letter-spacing:-.025em;margin:8px 0 12px;font-weight:600}
+h2{font-size:21px;letter-spacing:-.015em;margin:64px 0 6px;font-weight:600}
+.lede,.sub{color:var(--muted);max-width:740px;margin:0 0 24px}
+.label{font-size:13px;color:var(--muted);font-weight:500;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:24px;align-items:start}
+.win{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.win .bar{padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;color:var(--faint)}
+.win .body{padding:28px}
+.step{font-size:13px;color:var(--muted);margin:0 0 4px}
+.win h3{margin:0 0 4px;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.win p.s{margin:0 0 20px;color:var(--muted);font-size:14px}
+.drop{border:1.5px dashed #C9C9C4;border-radius:12px;padding:32px 20px;text-align:center;background:#FBFBF9}
+.drop b{display:block;font-weight:600}.drop span{font-size:14px;color:var(--muted)}
+.or{display:flex;align-items:center;gap:12px;margin:18px 0;font-size:13px;color:var(--faint)}
+.or:before,.or:after{content:"";height:1px;background:var(--line);flex:1}
+.src{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:500;color:var(--ink)}
+.btn small{display:block;font-weight:400;color:var(--muted);font-size:12px;line-height:1.3}
+.ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex:none;font-weight:700;font-size:15px}
+.dbx{background:#E8F0FE;color:#0061FF}.gd{background:#E6F4EA;color:#0F9D58}
+.file{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);font-size:14px}
+.file.first{border-top:0}
+.file .n{flex:1;min-width:0}.file .n b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .n span{color:var(--muted);font-size:12px}
+.tag{font-size:12px;border-radius:999px;padding:2px 9px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.ok{color:var(--ok);border-color:#BFE0CF}.tag.bad{color:var(--warn);border-color:#EBCB95}
+.bar2{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}.bar2 i{display:block;height:100%;background:var(--brand)}
+.note{font-size:13px;color:var(--muted);margin:16px 0 0}
+.primary{display:inline-block;background:var(--brand);color:#fff;border-radius:10px;padding:12px 22px;font-weight:600;font-size:15px}
+.picker{background:#fff;border-radius:12px;border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.10);overflow:hidden}
+.picker .ph{display:flex;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.picker .row{display:flex;gap:10px;align-items:center;padding:9px 14px;font-size:14px;border-bottom:1px solid #F0F0EC}
+.picker .row.sel{background:#F1F4F9}
+.chk{width:16px;height:16px;border:1.5px solid #BDBDB8;border-radius:4px;flex:none}.sel .chk{background:var(--brand);border-color:var(--brand)}
+ul.notes{max-width:760px;color:var(--muted);font-size:15px;padding-left:18px}ul.notes li{margin:6px 0}ul.notes b{color:var(--ink);font-weight:600}
+.opt{max-width:760px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;font-size:15px;color:var(--muted)}
+.opt b{color:var(--ink)}
+@media(max-width:480px){.src{grid-template-columns:1fr}.win .body{padding:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="kicker">Paper Rocket signing · PAP-1449 · option for review · 13 Nov 2026</div>
+<h1>Import a document from Dropbox or Google Drive</h1>
+<p class="lede">On the first step of a new document, under the drop area: two buttons. Pick files in Dropbox's or Google's own window, we copy them in, and the screen carries on exactly as it does after an upload. Nothing is kept about the person's Dropbox or Drive.</p>
+<div class="opt"><b>Mockup only.</b> Nothing is built or connected. How it would work (unverified until built): Dropbox's Chooser hands back a short-lived download link for each file, and Google's Picker hands back file ids that we fetch with a read-only token used for that one import and never saved. Whether to use these or a full "connect your account" login is the first question at the foot of the page.</div>
+
+<h2>1. The upload step, with the two new buttons</h2>
+<p class="sub">Same page, same drop area. The buttons sit under it so the usual route stays first. PDF only, as today.</p>
+<div class="grid">
+ <div><p class="label">Desktop</p>
+  <div class="win"><div class="bar">sign.example.co.nz / documents / new</div><div class="body">
+   <p class="step">Step 1 of 3</p><h3>Add your document</h3><p class="s">PDF files, up to 50 MB each.</p>
+   <div class="drop"><b>Drop a PDF here, or choose a file</b><span>From this computer</span></div>
+   <div class="or">or import from</div>
+   <div class="src">
+    <div class="btn"><span class="ic dbx">D</span><span>Dropbox<small>Choose PDFs in Dropbox</small></span></div>
+    <div class="btn"><span class="ic gd">G</span><span>Google Drive<small>Choose PDFs in Drive</small></span></div>
+   </div>
+   <p class="note">Word, Excel and images are not accepted. Export them as PDF first.</p>
+  </div></div></div>
+ <div><p class="label">Phone, 390 px</p>
+  <div class="win" style="max-width:390px"><div class="body" style="padding:20px">
+   <p class="step">Step 1 of 3</p><h3>Add your document</h3>
+   <div class="drop" style="padding:22px 14px;margin-top:16px"><b>Choose a PDF</b><span>From this phone</span></div>
+   <div class="or">or import from</div>
+   <div class="src" style="grid-template-columns:1fr">
+    <div class="btn"><span class="ic dbx">D</span><span>Dropbox</span></div>
+    <div class="btn"><span class="ic gd">G</span><span>Google Drive</span></div>
+   </div></div></div></div>
+</div>
+
+<h2>2. Choosing files (the provider's own window)</h2>
+<p class="sub">This part is Dropbox's or Google's screen, not ours, so it will look like theirs. Sketched here only so the flow is clear.</p>
+<div class="grid">
+ <div class="picker"><div class="ph"><b style="color:var(--ink)">Choose from Dropbox</b><span>Only PDFs shown</span></div>
+  <div class="row">▸ Harbour Joinery</div><div class="row sel"><span class="chk"></span>Consultancy agreement, Lakeview Terrace.pdf</div><div class="row sel"><span class="chk"></span>Variation 2, kitchen.pdf</div></div>
+ <div class="picker"><div class="ph"><b style="color:var(--ink)">Select files, Google Drive</b><span>Only PDFs shown</span></div>
+  <div class="row">▸ Shared with me</div><div class="row sel"><span class="chk"></span>Engagement letter 2026.pdf</div><div class="row"><span class="chk"></span>Site inspection notes.pdf</div></div>
+</div>
+
+<h2>3. Importing, then the normal next step</h2>
+<p class="sub">Each file shows its own progress and ends as a normal document row, so "Add fields" works unchanged. A failed file says why in plain words and does not stop the others.</p>
+<div class="win" style="max-width:760px"><div class="body">
+ <h3>Documents</h3><p class="s">Add and configure multiple documents</p>
+ <div class="file first"><div class="n"><b>Consultancy agreement, Lakeview Terrace.pdf</b><span>Imported from Dropbox · 6 pages · 1.2 MB</span></div><span class="tag ok">Ready</span></div>
+ <div class="file"><div class="n"><b>Variation 2, kitchen.pdf</b><span>Importing from Dropbox…</span><div class="bar2"><i style="width:62%"></i></div></div><span class="tag">62%</span></div>
+ <div class="file"><div class="n"><b>Engagement letter 2026.pdf</b><span>Imported from Google Drive · 3 pages · 310 KB</span></div><span class="tag ok">Ready</span></div>
+ <div class="file"><div class="n"><b>Scanned deed.pdf</b><span>Could not import: bigger than 50 MB. Try a smaller copy.</span></div><span class="tag bad">Not imported</span></div>
+ <p style="margin:22px 0 0"><span class="primary">Add fields →</span></p>
+</div></div>
+
+<h2>Questions and notes</h2>
+<ul class="notes">
+ <li><b>Question 1, what to build:</b> pickers only (recommended: no stored logins, smallest security surface, fits the server hold) or a connected account with saved access (more convenient, but we would store a token per person).</li>
+ <li><b>Question 2, who sees the buttons:</b> everyone who can upload, or switched on per organisation (recommended: per organisation, off by default, so a business that uses neither never sees them).</li>
+ <li><b>What it needs:</b> a Dropbox app key and a Google Cloud project with the Picker API. Only Daniel can create those accounts, and neither is set up.</li>
+ <li><b>Privacy line under the buttons:</b> "We copy the files you pick. We don't keep a link to your Dropbox or Drive."</li>
+ <li><b>Not in this mockup:</b> OneDrive and SharePoint (Constructive is on Microsoft 365, so probably the next ask), Word to PDF, folders.</li>
+ <li><b>Unverified:</b> how each picker looks on a phone, Google's review time for the read-only scope, and the 50 MB limit (the real limit comes from the server settings).</li>
+</ul>
+</div>
+</body>
+</html>
