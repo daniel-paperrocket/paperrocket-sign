@@ -72,3 +72,6 @@ Upstream files touched:
 - `packages/email/templates/team-email-removed.tsx`: rewritten on `PaperRocketEmail`, same exports and props.
 
 New, not upstream: `scripts/paperrocket/render-snapshots.ts`.
+## Upstream workflows removed
+
+Only `.github/workflows/paperrocket.yml` runs in this fork (security audit, 13 Nov 2026). Deleted: ci, codeql-analysis, deploy, e2e-tests, first-interaction, issue-labeler, issue-opened, pr-labeler, publish, semantic-pull-requests, stale, translations-force-pull, translations-pull, translations-upload. On a rebase, if upstream changes one of these, keep it deleted.
