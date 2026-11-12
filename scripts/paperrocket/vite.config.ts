@@ -12,6 +12,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig({
   root: path.join(__dirname, '../..'),
   plugins: [macrosPlugin(), lingui(), tsconfigPaths()],
+  esbuild: { jsx: 'automatic' },
   ssr: {
     noExternal: ['@documenso/email', '@documenso/lib'],
     external: [
