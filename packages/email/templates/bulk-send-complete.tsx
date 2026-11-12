@@ -1,8 +1,8 @@
-import { msg, Trans } from '@lingui/macro';
+import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Preview, Section, Text } from '../components';
-import { TemplateFooter } from '../template-components/template-footer';
+import { PaperRocketEmail } from '../paperrocket';
 
 export interface BulkSendCompleteEmailProps {
   userName: string;
@@ -24,71 +24,41 @@ export const BulkSendCompleteEmail = ({
 }: BulkSendCompleteEmailProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Bulk send operation complete for template "${templateName}"`;
-
   return (
-    <Html>
-      <Head />
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <Text className="text-sm">
-                <Trans>Hi {userName},</Trans>
-              </Text>
-
-              <Text className="text-sm">
-                <Trans>Your bulk send operation for template "{templateName}" has completed.</Trans>
-              </Text>
-
-              <Text className="font-semibold text-lg">
-                <Trans>Summary:</Trans>
-              </Text>
-
-              <ul className="my-2 ml-4 list-inside list-disc">
-                <li>
-                  <Trans>Total rows processed: {totalProcessed}</Trans>
+    <PaperRocketEmail
+      preheader={_(msg`Bulk send finished for "${templateName}".`)}
+      eyebrow={_(msg`Bulk send complete`)}
+      title={templateName}
+      lede={
+        <Trans>
+          Hi {userName}, your bulk send has finished. You can find the new documents in your dashboard under "Documents
+          created from template".
+        </Trans>
+      }
+      body={
+        errors && errors.length > 0 ? (
+          <div style={{ margin: '0 0 28px', fontSize: '14px', lineHeight: 1.5, color: '#2A2A28' }} className="pr-text">
+            <p style={{ margin: '0 0 8px', fontWeight: 600 }}>
+              <Trans>These rows had problems:</Trans>
+            </p>
+            <ul style={{ margin: 0, paddingLeft: '20px' }}>
+              {errors.map((error, index) => (
+                <li key={index} style={{ marginTop: index === 0 ? 0 : '4px' }}>
+                  {error}
                 </li>
-                <li className="mt-1">
-                  <Trans>Successfully created: {successCount}</Trans>
-                </li>
-                <li className="mt-1">
-                  <Trans>Failed: {failedCount}</Trans>
-                </li>
-              </ul>
-
-              {errors && errors.length > 0 && (
-                <Section className="mt-4">
-                  <Text className="font-semibold text-lg">
-                    <Trans>The following errors occurred:</Trans>
-                  </Text>
-
-                  <ul className="my-2 ml-4 list-inside list-disc">
-                    {errors.map((error, index) => (
-                      <li key={index} className="mt-1 text-destructive text-sm">
-                        {error}
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
-              )}
-
-              <Text className="text-sm">
-                <Trans>
-                  You can view the created documents in your dashboard under the "Documents created from template"
-                  section.
-                </Trans>
-              </Text>
-            </Section>
-          </Container>
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter isDocument={false} />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+              ))}
+            </ul>
+          </div>
+        ) : undefined
+      }
+      facts={[
+        { label: _(msg`Rows processed`), value: String(totalProcessed) },
+        { label: _(msg`Created`), value: String(successCount) },
+        { label: _(msg`Failed`), value: String(failedCount) },
+      ]}
+      footerNote="account"
+    />
   );
 };
+
+export default BulkSendCompleteEmail;

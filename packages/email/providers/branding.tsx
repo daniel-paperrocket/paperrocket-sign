@@ -1,5 +1,6 @@
 import type { EmailBrandingColors } from '@documenso/lib/utils/email-branding-colors';
 import { createContext, useContext } from 'react';
+import type { EmailLogoMeta } from '../paperrocket/logo';
 
 type BrandingContextValue = {
   brandingEnabled: boolean;
@@ -8,6 +9,9 @@ type BrandingContextValue = {
   brandingCompanyDetails: string;
   brandingHidePoweredBy: boolean;
   brandingColors?: EmailBrandingColors;
+  // paperrocket-sign: organisation name and logo metadata for the letterhead (see packages/email/paperrocket).
+  brandingName?: string;
+  brandingLogoMeta?: EmailLogoMeta;
 };
 
 const BrandingContext = createContext<BrandingContextValue | undefined>(undefined);

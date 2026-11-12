@@ -49,13 +49,26 @@ jobs:
         run: npm run build
       - name: Render email and certificate snapshots
         if: hashFiles('scripts/paperrocket/render-snapshots.ts') != ''
-        run: npx tsx scripts/paperrocket/render-snapshots.ts out/snapshots
+        run: npx vite-node --config scripts/paperrocket/vite.config.ts scripts/paperrocket/render-snapshots.ts out/snapshots
       - name: Upload snapshots
         if: hashFiles('scripts/paperrocket/render-snapshots.ts') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: snapshots
           path: out/snapshots
+      - name: Dark mode screenshots (designed dark and Gmail forced inversion)
+        if: hashFiles('scripts/paperrocket/render-dark.mjs') != ''
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "0"
+        run: |
+          npx playwright install --with-deps chromium
+          node scripts/paperrocket/render-dark.mjs out/snapshots out/dark
+      - name: Upload dark mode screenshots
+        if: hashFiles('scripts/paperrocket/render-dark.mjs') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: snapshots-dark
+          path: out/dark
 
   image:
     name: Publish image

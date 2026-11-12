@@ -2,16 +2,10 @@ import { RECIPIENT_ROLES_DESCRIPTION } from '@documenso/lib/constants/recipient-
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import type { RecipientRole } from '@prisma/client';
-import { OrganisationType } from '@prisma/client';
+import { OrganisationType, RecipientRole } from '@prisma/client';
 
-import { Body, Container, Head, Hr, Html, Link, Preview, Section, Text } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
-import { TemplateCustomMessageBody } from '../template-components/template-custom-message-body';
+import { getFirstName, PaperRocketEmail, SAMPLE, Strong } from '../paperrocket';
 import type { TemplateDocumentInviteProps } from '../template-components/template-document-invite';
-import { TemplateDocumentInvite } from '../template-components/template-document-invite';
-import { TemplateFooter } from '../template-components/template-footer';
-import { TemplateNewAccountWarning } from '../template-components/template-new-account-warning';
 
 export type DocumentInviteEmailTemplateProps = Partial<TemplateDocumentInviteProps> & {
   customBody?: string;
@@ -31,11 +25,10 @@ export type DocumentInviteEmailTemplateProps = Partial<TemplateDocumentInvitePro
 };
 
 export const DocumentInviteEmailTemplate = ({
-  inviterName = 'Lucas Smith',
-  inviterEmail = 'lucas@documenso.com',
-  documentName = 'Open Source Pledge.pdf',
-  signDocumentLink = 'https://documenso.com',
-  assetBaseUrl = 'http://localhost:3002',
+  inviterName = SAMPLE.senderName,
+  inviterEmail = SAMPLE.senderEmail,
+  documentName = SAMPLE.documentName,
+  signDocumentLink = SAMPLE.signLink,
   customBody,
   role,
   selfSigner = false,
@@ -49,82 +42,108 @@ export const DocumentInviteEmailTemplate = ({
 
   const action = _(RECIPIENT_ROLES_DESCRIPTION[role].actionVerb).toLowerCase();
 
-  let previewText = msg`${inviterName} has invited you to ${action} ${documentName}`;
+  const isOrganisation = organisationType === OrganisationType.ORGANISATION && Boolean(teamName);
+  const showSenderName = !isOrganisation || Boolean(includeSenderDetails);
+  const messageSender = showSenderName ? getFirstName(inviterName) : teamName;
 
-  if (organisationType === OrganisationType.ORGANISATION) {
-    previewText = includeSenderDetails
-      ? msg`${inviterName} on behalf of "${teamName}" has invited you to ${action} ${documentName}`
-      : msg`${teamName} has invited you to ${action} ${documentName}`;
+  let preheader = _(msg`${inviterName} has sent you "${documentName}" to ${action}.`);
+
+  if (isOrganisation && !includeSenderDetails) {
+    preheader = _(msg`${teamName} has sent you "${documentName}" to ${action}.`);
   }
 
   if (selfSigner) {
-    previewText = msg`Please ${action} your document ${documentName}`;
+    preheader = _(msg`Please ${action} your document "${documentName}".`);
   }
 
+  let eyebrow = _(msg`Document to sign`);
+  let buttonLabel = _(msg`Review and sign`);
+
+  if (role === RecipientRole.VIEWER || role === RecipientRole.CC) {
+    eyebrow = _(msg`Document to view`);
+    buttonLabel = _(msg`View document`);
+  }
+
+  if (role === RecipientRole.APPROVER) {
+    eyebrow = _(msg`Document to approve`);
+    buttonLabel = _(msg`Review and approve`);
+  }
+
+  if (role === RecipientRole.ASSISTANT) {
+    eyebrow = _(msg`Document to assist with`);
+    buttonLabel = _(msg`Review and assist`);
+  }
+
+  const takesTwoMinutes = role === RecipientRole.SIGNER || role === RecipientRole.APPROVER;
+
+  let lede = (
+    <Trans>
+      <Strong>{inviterName}</Strong> has sent this for you to {action}.
+    </Trans>
+  );
+
+  if (selfSigner) {
+    lede = <Trans>Please {action} your document.</Trans>;
+  } else if (isOrganisation && includeSenderDetails) {
+    lede = (
+      <Trans>
+        <Strong>{inviterName}</Strong> at <Strong>{teamName}</Strong> has sent this for you to {action}.
+      </Trans>
+    );
+  } else if (isOrganisation) {
+    lede = (
+      <Trans>
+        <Strong>{teamName}</Strong> has sent this for you to {action}.
+      </Trans>
+    );
+  }
+
+  const facts: Array<{ label: string; value: React.ReactNode }> = [];
+
+  if (!selfSigner) {
+    facts.push({
+      label: _(msg`From`),
+      value: showSenderName ? `${inviterName}, ${inviterEmail}` : teamName,
+    });
+  }
+
+  facts.push({ label: _(msg`Your part`), value: _(RECIPIENT_ROLES_DESCRIPTION[role].roleName) });
+
   return (
-    <Html>
-      <Head />
-
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section>
-          {newAccountWarningSenderEmail && (
-            <TemplateNewAccountWarning senderEmail={newAccountWarningSenderEmail} reportUrl={reportUrl} />
-          )}
-
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateDocumentInvite
-                inviterName={inviterName}
-                inviterEmail={inviterEmail}
-                documentName={documentName}
-                signDocumentLink={signDocumentLink}
-                assetBaseUrl={assetBaseUrl}
-                role={role}
-                selfSigner={selfSigner}
-                organisationType={organisationType}
-                teamName={teamName}
-                includeSenderDetails={includeSenderDetails}
-              />
-            </Section>
-          </Container>
-
-          <Container className="mx-auto mt-12 max-w-xl">
-            <Section>
-              {organisationType === OrganisationType.PERSONAL && (
-                <Text className="my-4 font-semibold text-base">
-                  <Trans>
-                    {inviterName}{' '}
-                    <Link className="font-normal text-muted-foreground" href={`mailto:${inviterEmail}`}>
-                      ({inviterEmail})
-                    </Link>
-                  </Trans>
-                </Text>
-              )}
-
-              <Text className="mt-2 text-base text-muted-foreground">
-                {customBody ? (
-                  <TemplateCustomMessageBody text={customBody} />
-                ) : (
-                  <Trans>
-                    {inviterName} has invited you to {action} the document "{documentName}".
-                  </Trans>
-                )}
-              </Text>
-            </Section>
-          </Container>
-
-          <Hr className="mx-auto mt-12 max-w-xl" />
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter reportUrl={reportUrl} />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={preheader}
+      eyebrow={eyebrow}
+      title={documentName}
+      lede={
+        <>
+          {lede}
+          {takesTwoMinutes ? (
+            <>
+              {' '}
+              <Trans>It takes about 2 minutes.</Trans>
+            </>
+          ) : null}
+        </>
+      }
+      message={
+        customBody && !selfSigner
+          ? { label: _(msg`Message from ${messageSender}`), text: customBody }
+          : undefined
+      }
+      button={{ href: signDocumentLink, label: buttonLabel }}
+      facts={facts}
+      plainLink={{ intro: _(msg`Button not working? Open`), href: signDocumentLink }}
+      warning={
+        newAccountWarningSenderEmail
+          ? {
+              title: _(msg`This was sent from a new account (${newAccountWarningSenderEmail})`),
+              body: <Trans>Only sign if you know the sender and were expecting this.</Trans>,
+            }
+          : undefined
+      }
+      senderName={showSenderName ? inviterName : undefined}
+      reportUrl={reportUrl}
+    />
   );
 };
 

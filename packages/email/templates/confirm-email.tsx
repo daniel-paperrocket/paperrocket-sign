@@ -1,42 +1,26 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Preview, Section } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
+import { PaperRocketEmail, SAMPLE } from '../paperrocket';
 import type { TemplateConfirmationEmailProps } from '../template-components/template-confirmation-email';
-import { TemplateConfirmationEmail } from '../template-components/template-confirmation-email';
-import { TemplateFooter } from '../template-components/template-footer';
 
 export const ConfirmEmailTemplate = ({
-  confirmationLink,
-  assetBaseUrl = 'http://localhost:3002',
+  confirmationLink = `${SAMPLE.baseUrl}/verify-email/Qm2kXr9TfLp4`,
 }: TemplateConfirmationEmailProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Please confirm your email address`;
-
   return (
-    <Html>
-      <Head />
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateConfirmationEmail confirmationLink={confirmationLink} assetBaseUrl={assetBaseUrl} />
-            </Section>
-          </Container>
-          <div className="mx-auto mt-12 max-w-xl" />
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter isDocument={false} />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`Confirm your email address to finish setting up your account.`)}
+      eyebrow={_(msg`Confirm your email`)}
+      title={_(msg`Confirm your email address`)}
+      lede={<Trans>Confirm this address to finish setting up your account.</Trans>}
+      button={{ href: confirmationLink, label: _(msg`Confirm email`) }}
+      plainLink={{ intro: _(msg`Button not working? Open`), href: confirmationLink }}
+      after={<Trans>This link expires in 1 hour.</Trans>}
+      footerNote="account"
+    />
   );
 };
 
