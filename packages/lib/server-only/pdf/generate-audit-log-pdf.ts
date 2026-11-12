@@ -6,7 +6,7 @@ import { i18n } from '@lingui/core';
 import { ZSupportedLanguageCodeSchema } from '../../constants/i18n';
 import { parseDocumentAuditLogData } from '../../utils/document-audit-logs';
 import { getTranslations } from '../../utils/i18n';
-import { getOrganisationClaimByTeamId } from '../organisation/get-organisation-claims';
+import { loadPdfBranding } from './load-pdf-branding';
 import type { GenerateCertificatePdfOptions } from './generate-certificate-pdf';
 import { renderAuditLogs } from './render-audit-logs';
 
@@ -29,8 +29,8 @@ export const generateAuditLogPdf = async (options: GenerateAuditLogPdfOptions) =
 
   const documentLanguage = ZSupportedLanguageCodeSchema.parse(language);
 
-  const [organisationClaim, partialAuditLogs, messages] = await Promise.all([
-    getOrganisationClaimByTeamId({ teamId: envelope.teamId }),
+  const [branding, partialAuditLogs, messages] = await Promise.all([
+    loadPdfBranding({ teamId: envelope.teamId }),
     getAuditLogs(envelope.id),
     getTranslations(documentLanguage),
   ]);
@@ -48,7 +48,7 @@ export const generateAuditLogPdf = async (options: GenerateAuditLogPdfOptions) =
     envelopeItems,
     recipients,
     auditLogs,
-    hidePoweredBy: organisationClaim.flags.hidePoweredBy ?? false,
+    branding,
     pageWidth,
     pageHeight,
     i18n,

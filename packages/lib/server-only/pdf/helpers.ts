@@ -28,6 +28,14 @@ export const ensureFontLibrary = () => {
     });
   }
 
+  // paperrocket-sign: ids on the certificate and audit log (OFL, JetBrains Mono Regular).
+  if (!FontLibrary.has('JetBrains Mono')) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    FontLibrary.use({
+      ['JetBrains Mono']: [path.join(fontPath, 'jetbrains-mono-regular.ttf')],
+    });
+  }
+
   if (!FontLibrary.has('Noto Sans')) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     FontLibrary.use({
