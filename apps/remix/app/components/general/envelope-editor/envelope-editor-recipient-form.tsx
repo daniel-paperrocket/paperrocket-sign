@@ -6,6 +6,7 @@ import {
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
+import { IS_AI_FEATURES_CONFIGURED } from '@documenso/lib/constants/app';
 import type { TDetectedRecipientSchema } from '@documenso/lib/server-only/ai/envelope/detect-recipients/schema';
 import { ZRecipientAuthOptionsSchema } from '@documenso/lib/types/document-auth';
 import { nanoid } from '@documenso/lib/universal/id';
@@ -387,7 +388,7 @@ export const EnvelopeEditorRecipientForm = () => {
         </div>
 
         <div className="flex flex-row items-center space-x-2">
-          {editorConfig.recipients?.allowAIDetection && (
+          {editorConfig.recipients?.allowAIDetection && IS_AI_FEATURES_CONFIGURED() && ( // paperrocket-sign: AI stripped (Daniel, 13 Nov 2026)
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -593,7 +594,7 @@ export const EnvelopeEditorRecipientForm = () => {
           onConfirm={handleSigningOrderDisable}
         />
 
-        {editorConfig.recipients?.allowAIDetection && (
+        {editorConfig.recipients?.allowAIDetection && IS_AI_FEATURES_CONFIGURED() && ( // paperrocket-sign: AI stripped (Daniel, 13 Nov 2026)
           <AiRecipientDetectionDialog
             open={isAiDialogOpen}
             onOpenChange={onAiDialogOpenChange}

@@ -54,7 +54,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     teamId: result.teamId,
     organisationClaim,
     preferences: {
-      aiFeaturesEnabled: teamSettings.aiFeaturesEnabled,
+      aiFeaturesEnabled: false, // paperrocket-sign: AI stripped (Daniel, 13 Nov 2026)
     },
   };
 };
@@ -116,7 +116,7 @@ export default function AuthoringLayout() {
     teamEmail: null,
     currentTeamRole: TeamMemberRole.MEMBER,
     preferences: {
-      aiFeaturesEnabled: preferences.aiFeaturesEnabled,
+      aiFeaturesEnabled: false, // paperrocket-sign: AI stripped (Daniel, 13 Nov 2026)
     },
   };
 
