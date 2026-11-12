@@ -1,10 +1,8 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Plural, Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Preview, Section } from '../components';
-import { TemplateAccessAuth2FA } from '../template-components/template-access-auth-2fa';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
-import { TemplateFooter } from '../template-components/template-footer';
+import { PaperRocketEmail } from '../paperrocket';
 
 export type AccessAuth2FAEmailTemplateProps = {
   documentTitle: string;
@@ -18,46 +16,31 @@ export type AccessAuth2FAEmailTemplateProps = {
 export const AccessAuth2FAEmailTemplate = ({
   documentTitle,
   code,
-  userEmail,
   userName,
   expiresInMinutes,
-  assetBaseUrl = 'http://localhost:3002',
 }: AccessAuth2FAEmailTemplateProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Your verification code is ${code}`;
-
   return (
-    <Html>
-      <Head />
-
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateAccessAuth2FA
-                documentTitle={documentTitle}
-                code={code}
-                userEmail={userEmail}
-                userName={userName}
-                expiresInMinutes={expiresInMinutes}
-                assetBaseUrl={assetBaseUrl}
-              />
-            </Section>
-          </Container>
-
-          <div className="mx-auto mt-12 max-w-xl" />
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter isDocument={false} />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`Your verification code is ${code}`)}
+      eyebrow={_(msg`Verification code`)}
+      title={_(msg`Your code to open the document`)}
+      lede={
+        <Trans>
+          Hi {userName}, enter this code to open "{documentTitle}".
+        </Trans>
+      }
+      code={code}
+      facts={[
+        {
+          label: _(msg`Expires in`),
+          value: <Plural value={expiresInMinutes} one="# minute" other="# minutes" />,
+        },
+      ]}
+      after={<Trans>If you didn't ask for this code, you can ignore this email.</Trans>}
+      footerNote="account"
+    />
   );
 };
 

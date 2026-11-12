@@ -3,10 +3,7 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 
-import { Body, Button, Container, Head, Hr, Html, Link, Preview, Section, Text } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
-import { TemplateFooter } from '../template-components/template-footer';
-import TemplateImage from '../template-components/template-image';
+import { BulletList, Paragraph, PaperRocketEmail, SAMPLE } from '../paperrocket';
 
 export type ConfirmTeamEmailProps = {
   assetBaseUrl: string;
@@ -17,96 +14,41 @@ export type ConfirmTeamEmailProps = {
 };
 
 export const ConfirmTeamEmailTemplate = ({
-  assetBaseUrl = 'http://localhost:3002',
-  baseUrl = 'https://documenso.com',
-  teamName = 'Team Name',
-  teamUrl = 'demo',
-  token = '',
+  baseUrl = SAMPLE.baseUrl,
+  teamName = SAMPLE.organisationName,
+  teamUrl = SAMPLE.teamUrl,
+  token = 'Qm2kXr9TfLp4',
 }: ConfirmTeamEmailProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Accept team email request for ${teamName} on Documenso`;
+  const acceptUrl = `${baseUrl}/team/verify/email/${token}`;
 
   return (
-    <Html>
-      <Head />
-      <Body className="mx-auto my-auto font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section className="bg-background">
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid px-2 pt-2 backdrop-blur-sm">
-            <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6 p-2" />
-
-            <Section>
-              <TemplateImage className="mx-auto" assetBaseUrl={assetBaseUrl} staticAsset="mail-open.png" />
-            </Section>
-
-            <Section className="p-2 text-muted-foreground">
-              <Text className="text-center font-medium text-foreground text-lg">
-                <Trans>Verify your team email address</Trans>
-              </Text>
-
-              <Text className="text-center text-base">
-                <Trans>
-                  <span className="font-bold">{teamName}</span> has requested to use your email address for their team
-                  on Documenso.
-                </Trans>
-              </Text>
-
-              <div className="mx-auto mt-6 w-fit rounded-lg bg-muted px-4 py-2 font-medium text-base text-muted-foreground">
-                {formatTeamUrl(teamUrl, baseUrl)}
-              </div>
-
-              <Section className="mt-6">
-                <Text className="my-0 text-sm">
-                  <Trans>
-                    By accepting this request, you will be granting <strong>{teamName}</strong> access to:
-                  </Trans>
-                </Text>
-
-                <ul className="mt-2 mb-0">
-                  <li className="text-sm">
-                    <Trans>View all documents sent to and from this email address</Trans>
-                  </li>
-                  <li className="mt-1 text-sm">
-                    <Trans>Allow document recipients to reply directly to this email address</Trans>
-                  </li>
-                  <li className="mt-1 text-sm">
-                    <Trans>Send documents on behalf of the team using the email address</Trans>
-                  </li>
-                </ul>
-
-                <Text className="mt-2 text-sm">
-                  <Trans>
-                    You can revoke access at any time in your team settings on Documenso{' '}
-                    <Link href={`${baseUrl}/settings/teams`}>here</Link>.
-                  </Trans>
-                </Text>
-              </Section>
-
-              <Section className="mt-8 mb-6 text-center">
-                <Button
-                  className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-center font-medium text-primary-foreground text-sm no-underline"
-                  href={`${baseUrl}/team/verify/email/${token}`}
-                >
-                  <Trans>Accept</Trans>
-                </Button>
-              </Section>
-            </Section>
-
-            <Text className="text-center text-muted-foreground text-xs">
-              <Trans>Link expires in 1 hour.</Trans>
-            </Text>
-          </Container>
-
-          <Hr className="mx-auto mt-12 max-w-xl" />
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter isDocument={false} />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`${teamName} has asked to use your email address for their team.`)}
+      eyebrow={_(msg`Team email request`)}
+      title={_(msg`${teamName} wants to use your email address`)}
+      lede={<Trans>Accepting gives {teamName} the access below. You can remove it any time in your team settings.</Trans>}
+      body={
+        <>
+          <Paragraph>
+            <Trans>By accepting, {teamName} will be able to:</Trans>
+          </Paragraph>
+          <BulletList
+            items={[
+              <Trans key="view">View all documents sent to and from this email address</Trans>,
+              <Trans key="reply">Let document recipients reply directly to this email address</Trans>,
+              <Trans key="send">Send documents on behalf of the team using this email address</Trans>,
+            ]}
+          />
+        </>
+      }
+      button={{ href: acceptUrl, label: _(msg`Accept request`) }}
+      facts={[{ label: _(msg`Team`), value: formatTeamUrl(teamUrl, baseUrl) }]}
+      plainLink={{ intro: _(msg`Button not working? Open`), href: acceptUrl }}
+      after={<Trans>This link expires in 1 hour.</Trans>}
+      footerNote="account"
+    />
   );
 };
 

@@ -1,11 +1,9 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Preview, Section } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
+import { PaperRocketEmail, SAMPLE } from '../paperrocket';
 import type { TemplateDocumentCompletedProps } from '../template-components/template-document-completed';
-import { TemplateDocumentCompleted } from '../template-components/template-document-completed';
-import { TemplateFooter } from '../template-components/template-footer';
 
 export type DocumentCompletedEmailTemplateProps = Partial<TemplateDocumentCompletedProps> & {
   customBody?: string;
@@ -13,42 +11,25 @@ export type DocumentCompletedEmailTemplateProps = Partial<TemplateDocumentComple
 };
 
 export const DocumentCompletedEmailTemplate = ({
-  downloadLink = 'https://documenso.com',
-  documentName = 'Open Source Pledge.pdf',
-  assetBaseUrl = 'http://localhost:3002',
+  downloadLink = SAMPLE.documentLink,
+  documentName = SAMPLE.documentName,
   customBody,
   reportUrl,
 }: DocumentCompletedEmailTemplateProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Completed Document`;
-
   return (
-    <Html>
-      <Head />
-      <Body className="mx-auto my-auto font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section className="bg-background">
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-2 backdrop-blur-sm">
-            <Section className="p-2">
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateDocumentCompleted
-                downloadLink={downloadLink}
-                documentName={documentName}
-                assetBaseUrl={assetBaseUrl}
-                customBody={customBody}
-              />
-            </Section>
-          </Container>
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter reportUrl={reportUrl} />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`Everyone has signed "${documentName}". Your copy is ready.`)}
+      eyebrow={_(msg`Completed`)}
+      title={documentName}
+      lede={<Trans>Everyone has signed this document. You can download your copy below.</Trans>}
+      message={customBody ? { label: _(msg`Message`), text: customBody } : undefined}
+      button={{ href: downloadLink, label: _(msg`Download PDF`) }}
+      plainLink={{ intro: _(msg`Button not working? Open`), href: downloadLink }}
+      footerNote="notice"
+      reportUrl={reportUrl}
+    />
   );
 };
 

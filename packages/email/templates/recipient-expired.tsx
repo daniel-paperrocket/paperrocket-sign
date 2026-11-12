@@ -1,55 +1,39 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Hr, Html, Preview, Section } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
-import { TemplateFooter } from '../template-components/template-footer';
+import { PaperRocketEmail, SAMPLE, Strong } from '../paperrocket';
 import type { TemplateRecipientExpiredProps } from '../template-components/template-recipient-expired';
-import { TemplateRecipientExpired } from '../template-components/template-recipient-expired';
 
 export type RecipientExpiredEmailTemplateProps = Partial<TemplateRecipientExpiredProps>;
 
 export const RecipientExpiredTemplate = ({
-  documentName = 'Open Source Pledge.pdf',
-  recipientName = 'John Doe',
-  recipientEmail = 'john@example.com',
-  documentLink = 'https://documenso.com',
-  assetBaseUrl = 'http://localhost:3002',
+  documentName = SAMPLE.documentName,
+  recipientName = SAMPLE.recipientName,
+  recipientEmail = SAMPLE.recipientEmail,
+  documentLink = SAMPLE.documentLink,
 }: RecipientExpiredEmailTemplateProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`The signing window for "${recipientName}" on document "${documentName}" has expired.`;
+  const displayName = recipientName || recipientEmail;
 
   return (
-    <Html>
-      <Head />
-
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateRecipientExpired
-                documentName={documentName}
-                recipientName={recipientName}
-                recipientEmail={recipientEmail}
-                documentLink={documentLink}
-                assetBaseUrl={assetBaseUrl}
-              />
-            </Section>
-          </Container>
-
-          <Hr className="mx-auto mt-12 max-w-xl" />
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`The signing window for ${displayName} on "${documentName}" has expired.`)}
+      eyebrow={_(msg`Signing window expired`)}
+      eyebrowTone="alert"
+      title={documentName}
+      lede={
+        <Trans>
+          The signing window for <Strong>{displayName}</Strong> has expired. You can resend the document to give them
+          more time, or cancel it.
+        </Trans>
+      }
+      button={{ href: documentLink, label: _(msg`View document`) }}
+      facts={[{ label: _(msg`Recipient`), value: `${recipientName}, ${recipientEmail}` }]}
+      plainLink={{ intro: _(msg`Button not working? Open`), href: documentLink }}
+      footerNote="account"
+    />
   );
 };
 

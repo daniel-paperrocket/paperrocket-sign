@@ -28,6 +28,7 @@ import type { Logger } from 'pino';
 import { aiRoute } from './api/ai/route';
 import { downloadRoute } from './api/download/download';
 import { filesRoute } from './api/files/files';
+import { paperRocketEmailLogoRoute } from './api/paperrocket/email-logo';
 import { type AppContext, appContext } from './context';
 import { csrfMiddleware } from './csrf-middleware';
 import { appMiddleware } from './middleware';
@@ -129,6 +130,9 @@ app.route('/api/files', filesRoute);
 // AI route.
 app.use('/api/ai/*', aiRateLimitMiddleware);
 app.route('/api/ai', aiRoute);
+
+// paperrocket-sign: email letterhead logo variants (plate, dark).
+app.route('/api/paperrocket/email-logo', paperRocketEmailLogoRoute);
 
 // CSC OAuth routes (mounted from @documenso/ee).
 app.route('/api/csc', csc);

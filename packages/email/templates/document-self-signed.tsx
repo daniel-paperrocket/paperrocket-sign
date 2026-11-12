@@ -1,43 +1,27 @@
+import { env } from '@documenso/lib/utils/env';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Preview, Section } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
+import { PaperRocketEmail, SAMPLE } from '../paperrocket';
 import type { TemplateDocumentSelfSignedProps } from '../template-components/template-document-self-signed';
-import { TemplateDocumentSelfSigned } from '../template-components/template-document-self-signed';
-import { TemplateFooter } from '../template-components/template-footer';
 
 export type DocumentSelfSignedTemplateProps = TemplateDocumentSelfSignedProps;
 
-export const DocumentSelfSignedEmailTemplate = ({
-  documentName = 'Open Source Pledge.pdf',
-  assetBaseUrl = 'http://localhost:3002',
-}: DocumentSelfSignedTemplateProps) => {
+export const DocumentSelfSignedEmailTemplate = ({ documentName = SAMPLE.documentName }: DocumentSelfSignedTemplateProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Completed Document`;
+  const signUpUrl = `${env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000'}/signup`;
 
   return (
-    <Html>
-      <Head />
-      <Body className="mx-auto my-auto font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section className="bg-background">
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-2 backdrop-blur-sm">
-            <Section className="p-2">
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateDocumentSelfSigned documentName={documentName} assetBaseUrl={assetBaseUrl} />
-            </Section>
-          </Container>
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`You have signed "${documentName}".`)}
+      eyebrow={_(msg`Signed`)}
+      title={documentName}
+      lede={<Trans>You have signed this document. Create a free account to see your signed documents any time.</Trans>}
+      button={{ href: signUpUrl, label: _(msg`Create account`) }}
+      footerNote="account"
+    />
   );
 };
 
