@@ -39,7 +39,7 @@ for (const n of nodes) {
 
 // Gmail darkens light fills and leaves mid-tone and dark ones (brand panels, buttons) as authored.
 const KEEP = `
-const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number); if (m.length > 3 && m[3] === 0) return null;
+const lum = (c) => { const m = c.match(/[0-9.]+/g).map(Number); if (m.length > 3 && m[3] === 0) return null;
   const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
   return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
 for (const el of document.querySelectorAll('body *')) {
