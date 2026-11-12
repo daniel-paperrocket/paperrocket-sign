@@ -129,7 +129,7 @@ const main = async () => {
 
   for (const file of files) {
     const name = file.replace(/\.tsx$/, '');
-    const mod = await import(pathToFileURL(path.join(templatesDir, file)).href);
+    const mod = await import(path.join(templatesDir, file));
     const Component = mod.default;
 
     if (typeof Component !== 'function') {
@@ -191,7 +191,7 @@ const main = async () => {
   const certScript = path.resolve(__dirname, 'render-certificate-snapshot.ts');
 
   if (fs.existsSync(certScript)) {
-    const cert = await import(pathToFileURL(certScript).href);
+    const cert = await import(certScript);
     await cert.default(outDir);
   }
 
