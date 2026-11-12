@@ -16,3 +16,7 @@ No files deleted, no dependencies or schema touched. The `GOOGLE_VERTEX_*` env v
 
 Already hidden upstream by `IS_AI_FEATURES_CONFIGURED()`: the AI toggle in `document-preferences-form.tsx`.
 Left alone (inert): AI docs pages, `.env.example`, `@ai-sdk/google-vertex` dependency, `aiFeaturesEnabled` DB columns and tRPC settings inputs, the unused dialog and server-only AI files.
+
+## Upstream workflows removed
+
+Only `.github/workflows/paperrocket.yml` runs in this fork (security audit, 13 Nov 2026). Deleted: ci, codeql-analysis, deploy, e2e-tests, first-interaction, issue-labeler, issue-opened, pr-labeler, publish, semantic-pull-requests, stale, translations-force-pull, translations-pull, translations-upload. On a rebase, if upstream changes one of these, keep it deleted.
