@@ -88,7 +88,7 @@ const buildLogoFixture = async (name: LogoName): Promise<EmailLogoMeta> => {
 // Extra prop sets for templates with real variants. Everything else renders on its defaults.
 const EXTRA_PROPS: Record<string, Record<string, unknown>[]> = {
   'document-invite': [
-    {},
+    { role: 'SIGNER' },
     { role: 'VIEWER' },
     { role: 'APPROVER' },
     { role: 'SIGNER', customBody: 'Kia ora Sam, could you sign by Friday please?' },
