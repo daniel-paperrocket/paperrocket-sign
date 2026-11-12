@@ -1,49 +1,33 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Hr, Html, Preview, Section } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
-import {
-  TemplateDocumentDelete,
-  type TemplateDocumentDeleteProps,
-} from '../template-components/template-document-super-delete';
-import { TemplateFooter } from '../template-components/template-footer';
+import { Paragraph, PaperRocketEmail, SAMPLE } from '../paperrocket';
+import type { TemplateDocumentDeleteProps } from '../template-components/template-document-super-delete';
 
 export type DocumentDeleteEmailTemplateProps = Partial<TemplateDocumentDeleteProps>;
 
 export const DocumentSuperDeleteEmailTemplate = ({
-  documentName = 'Open Source Pledge.pdf',
-  assetBaseUrl = 'http://localhost:3002',
+  documentName = SAMPLE.documentName,
   reason = 'Unknown',
 }: DocumentDeleteEmailTemplateProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`An admin has deleted your document "${documentName}".`;
-
   return (
-    <Html>
-      <Head />
-
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateDocumentDelete reason={reason} documentName={documentName} assetBaseUrl={assetBaseUrl} />
-            </Section>
-          </Container>
-
-          <Hr className="mx-auto mt-12 max-w-xl" />
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`An admin has deleted "${documentName}".`)}
+      eyebrow={_(msg`Deleted by an admin`)}
+      eyebrowTone="alert"
+      title={documentName}
+      lede={<Trans>An admin has deleted this document. It can't be recovered.</Trans>}
+      body={
+        <Paragraph>
+          <Trans>If you want to dispute the reason, please contact support.</Trans>
+        </Paragraph>
+      }
+      message={{ label: _(msg`Reason given`), text: reason }}
+      footerNote="account"
+    />
   );
 };
 

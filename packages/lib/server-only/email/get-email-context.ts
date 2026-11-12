@@ -21,6 +21,7 @@ import {
   teamGlobalSettingsToBranding,
 } from '../../utils/team-global-settings-to-branding';
 import { extractDerivedTeamSettings } from '../../utils/teams';
+import { getEmailLogoMeta } from '../paperrocket/email-logo';
 import { resolveEmailTransport } from './resolve-email-transport';
 
 type EmailMetaOption = Partial<Pick<DocumentMeta, 'emailId' | 'emailReplyTo' | 'language'>>;
@@ -231,7 +232,12 @@ const handleOrganisationEmailContext = async (organisationId: string) => {
 
   return {
     allowedEmails,
-    branding,
+    // paperrocket-sign: the letterhead needs the organisation name and the logo shape.
+    branding: {
+      ...branding,
+      brandingName: organisation.name,
+      brandingLogoMeta: await getEmailLogoMeta({ kind: 'organisation', id: organisation.id }),
+    },
     settings: organisation.organisationGlobalSettings,
     claims,
     emailsDisabled: organisation.owner.disabled || claims.flags.disableEmails === true,
@@ -291,7 +297,11 @@ const handleTeamEmailContext = async (teamId: number) => {
 
   return {
     allowedEmails,
-    branding,
+    branding: {
+      ...branding,
+      brandingName: organisation.name,
+      brandingLogoMeta: await getEmailLogoMeta({ kind: 'team', id: String(teamId) }),
+    },
     settings: teamSettings,
     claims,
     emailsDisabled: organisation.owner.disabled || claims.flags.disableEmails === true,

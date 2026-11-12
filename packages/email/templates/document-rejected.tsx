@@ -1,10 +1,8 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Preview, Section } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
-import { TemplateDocumentRejected } from '../template-components/template-document-rejected';
-import { TemplateFooter } from '../template-components/template-footer';
+import { PaperRocketEmail, SAMPLE, Strong } from '../paperrocket';
 
 type DocumentRejectedEmailProps = {
   recipientName: string;
@@ -15,43 +13,29 @@ type DocumentRejectedEmailProps = {
 };
 
 export function DocumentRejectedEmail({
-  recipientName,
-  documentName,
-  documentUrl,
+  recipientName = SAMPLE.recipientName,
+  documentName = SAMPLE.documentName,
+  documentUrl = SAMPLE.documentLink,
   rejectionReason,
-  assetBaseUrl = 'http://localhost:3002',
 }: DocumentRejectedEmailProps) {
   const { _ } = useLingui();
 
-  const previewText = _(msg`${recipientName} has rejected the document '${documentName}'`);
-
   return (
-    <Html>
-      <Head />
-
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{previewText}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateDocumentRejected
-                recipientName={recipientName}
-                documentName={documentName}
-                documentUrl={documentUrl}
-                rejectionReason={rejectionReason}
-              />
-            </Section>
-          </Container>
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`${recipientName} has rejected "${documentName}".`)}
+      eyebrow={_(msg`Rejected`)}
+      eyebrowTone="alert"
+      title={documentName}
+      lede={
+        <Trans>
+          <Strong>{recipientName}</Strong> has rejected this document.
+        </Trans>
+      }
+      message={rejectionReason ? { label: _(msg`Reason`), text: rejectionReason } : undefined}
+      button={{ href: documentUrl, label: _(msg`View document`) }}
+      plainLink={{ intro: _(msg`Button not working? Open`), href: documentUrl }}
+      footerNote="account"
+    />
   );
 }
 

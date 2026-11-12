@@ -1,10 +1,8 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Preview, Section } from '../components';
-import { TemplateBrandingLogo } from '../template-components/template-branding-logo';
-import { TemplateDocumentRejectionConfirmed } from '../template-components/template-document-rejection-confirmed';
-import { TemplateFooter } from '../template-components/template-footer';
+import { Paragraph, PaperRocketEmail, SAMPLE, Strong } from '../paperrocket';
 
 export type DocumentRejectionConfirmedEmailProps = {
   recipientName: string;
@@ -15,43 +13,34 @@ export type DocumentRejectionConfirmedEmailProps = {
 };
 
 export function DocumentRejectionConfirmedEmail({
-  recipientName,
-  documentName,
-  documentOwnerName,
+  documentName = SAMPLE.documentName,
+  documentOwnerName = SAMPLE.senderName,
   reason,
-  assetBaseUrl = 'http://localhost:3002',
 }: DocumentRejectionConfirmedEmailProps) {
   const { _ } = useLingui();
 
-  const previewText = _(msg`You have rejected the document '${documentName}'`);
-
   return (
-    <Html>
-      <Head />
-
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{previewText}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <TemplateBrandingLogo assetBaseUrl={assetBaseUrl} className="mb-4 h-6" />
-
-              <TemplateDocumentRejectionConfirmed
-                recipientName={recipientName}
-                documentName={documentName}
-                documentOwnerName={documentOwnerName}
-                reason={reason}
-              />
-            </Section>
-          </Container>
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`You have rejected "${documentName}". ${documentOwnerName} has been told.`)}
+      eyebrow={_(msg`Rejection confirmed`)}
+      title={documentName}
+      lede={
+        <Trans>
+          You have rejected this document, sent by <Strong>{documentOwnerName}</Strong>.
+        </Trans>
+      }
+      body={
+        <Paragraph>
+          <Trans>
+            {documentOwnerName} has been told. You don't need to do anything else, though they may get in touch with
+            questions.
+          </Trans>
+        </Paragraph>
+      }
+      message={reason ? { label: _(msg`Your reason`), text: reason } : undefined}
+      senderName={documentOwnerName}
+      footerNote="notice"
+    />
   );
 }
 

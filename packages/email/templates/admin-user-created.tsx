@@ -1,42 +1,26 @@
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
 
-import { Body, Container, Head, Html, Img, Preview, Section } from '../components';
+import { PaperRocketEmail, SAMPLE } from '../paperrocket';
 import type { TemplateAdminUserCreatedProps } from '../template-components/template-admin-user-created';
-import { TemplateAdminUserCreated } from '../template-components/template-admin-user-created';
-import { TemplateFooter } from '../template-components/template-footer';
-import { getEmailAssetUrl } from '../utils/asset-url';
 
 export const AdminUserCreatedTemplate = ({
-  resetPasswordLink,
-  assetBaseUrl = 'http://localhost:3002',
+  resetPasswordLink = `${SAMPLE.baseUrl}/reset-password/Qm2kXr9TfLp4`,
 }: TemplateAdminUserCreatedProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Set your password for Documenso`;
-
   return (
-    <Html>
-      <Head />
-      <Body className="mx-auto my-auto bg-background font-sans">
-        <Preview>{_(previewText)}</Preview>
-
-        <Section>
-          <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
-            <Section>
-              <Img src={getEmailAssetUrl(assetBaseUrl, 'static/logo.png')} alt="Documenso Logo" className="mb-4 h-6" />
-
-              <TemplateAdminUserCreated resetPasswordLink={resetPasswordLink} assetBaseUrl={assetBaseUrl} />
-            </Section>
-          </Container>
-          <div className="mx-auto mt-12 max-w-xl" />
-
-          <Container className="mx-auto max-w-xl">
-            <TemplateFooter isDocument={false} />
-          </Container>
-        </Section>
-      </Body>
-    </Html>
+    <PaperRocketEmail
+      preheader={_(msg`An account has been set up for you. Choose your password to start.`)}
+      eyebrow={_(msg`Welcome`)}
+      title={_(msg`Set your password`)}
+      lede={<Trans>An administrator has created an account for you. Choose a password to get started.</Trans>}
+      button={{ href: resetPasswordLink, label: _(msg`Set password`) }}
+      plainLink={{ intro: _(msg`Button not working? Open`), href: resetPasswordLink }}
+      after={<Trans>This link expires in 24 hours. If you weren't expecting an account, you can ignore this email.</Trans>}
+      footerNote="account"
+    />
   );
 };
 
